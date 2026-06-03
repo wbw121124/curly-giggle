@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>AES-GCM 安全加密箱 | 单文件/多图批量/摄像头拍照</title>
+    <style>
+        *{box-sizing:border-box;font-family:system-ui,'Segoe UI',sans-serif;}
+        body{background:linear-gradient(145deg,#f5f7fc,#eef2f8);margin:0;min-height:100vh;padding:2rem 1rem;}
+        .app-container{max-width:1600px;margin:0 auto;}
+        .header{text-align:center;margin-bottom:2rem;}
+        .header h1{font-size:2rem;background:linear-gradient(135deg,#1a2a4f,#0f2b3d);background-clip:text;-webkit-background-clip:text;color:transparent;}
+        .cards-grid{display:flex;flex-wrap:wrap;gap:1.8rem;justify-content:center;}
+        .card{flex:1;min-width:330px;background:rgba(255,255,255,0.88);border-radius:2rem;box-shadow:0 20px 35px -12px rgba(0,0,0,0.12);padding:1.5rem;backdrop-filter:blur(2px);}
+        .card-title{font-size:1.4rem;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:1rem;color:#1e2f41;border-left:5px solid #2c7da0;padding-left:1rem;}
+        .file-area{background:#f8fafd;border-radius:1.5rem;padding:1rem;margin-bottom:1rem;border:1px dashed #b9d0e4;text-align:center;}
+        .file-label{display:inline-flex;align-items:center;gap:0.5rem;background:#fff;padding:0.5rem 1rem;border-radius:3rem;font-weight:500;color:#1e4663;cursor:pointer;border:1px solid #cbdde9;}
+        input[type="file"]{display:none;}
+        .file-name{font-size:0.75rem;color:#3d5a73;margin-top:0.5rem;background:#eef3f0;display:inline-block;padding:0.2rem 0.7rem;border-radius:2rem;max-width:100%;word-break:break-all;}
+        .btn{background:#1f6392;border:none;color:white;font-weight:600;padding:0.7rem 1rem;border-radius:2.5rem;cursor:pointer;font-size:0.85rem;width:100%;margin-top:0.6rem;transition:0.2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+        .btn-primary{background:#1f6392;}
+        .btn-primary:hover{background:#0f4b6e;}
+        .btn-secondary{background:#3b6e54;}
+        .btn-outline{background:transparent;border:1px solid #1f6392;color:#1f6392;}
+        .key-box{background:#f0f4e9;padding:0.6rem;border-radius:1rem;font-family:monospace;font-size:0.7rem;word-break:break-all;margin:0.8rem 0;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+        .copy-btn{background:#d4e0e9;border:none;border-radius:2rem;padding:4px 12px;cursor:pointer;}
+        .preview-box{margin-top:1rem;background:#fefefe;border-radius:1rem;padding:0.8rem;border:1px solid #e2ebf3;max-height:400px;overflow-y:auto;}
+        .image-gallery{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:10px;}
+        .gallery-item{background:#f9f9ff;border-radius:12px;padding:6px;text-align:center;width:120px;cursor:pointer;border:1px solid #dce5ef;}
+        .gallery-item img{width:100px;height:100px;object-fit:cover;border-radius:8px;}
+        .gallery-item .name{font-size:0.65rem;word-break:break-all;margin-top:4px;}
+        .btn-download-single{background:#eef3fc;border:none;border-radius:20px;padding:4px 8px;font-size:0.6rem;margin-top:4px;cursor:pointer;}
+        .status-badge{display:inline-block;background:#eef2f5;padding:4px 12px;border-radius:2rem;font-size:0.75rem;}
+        .success{color:#0f5c3b;background:#e0f2e9;}
+        .error{color:#b13b3b;background:#ffe8e8;}
+        .flex-row{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;}
+        input[type="text"]{flex:1;padding:0.5rem 1rem;border-radius:2rem;border:1px solid #cbdde9;font-family:monospace;}
+        .small-note{font-size:0.7rem;color:#5f7c9a;text-align:center;margin-top:0.6rem;}
+        .camera-panel{margin-top:10px;}
+        .camera-video{width:100%;border-radius:1rem;background:#000;}
+        hr{margin:0.8rem 0;}
+        footer{text-align:center;margin-top:2rem;font-size:0.7rem;color:#6c8dae;}
+        .batch-list{background:#fef9e6;padding:8px;border-radius:1rem;margin-bottom:8px;max-height:150px;overflow-y:auto;font-size:0.7rem;}
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="header"><h1>🛡️ AES-GCM 安全加密箱</h1><p>单文件/多图批量/摄像头拍照 · 压缩+哈希+防篡改</p></div>
+    <div class="cards-grid">
+        <!-- 卡片1: 单文件加密 + 摄像头 -->
+        <div class="card">
+            <div class="card-title">🔒 单文件/拍照加密</div>
+            <div class="file-area">
+                <label class="file-label" for="encryptFileInput">📂 选择文件(图/视频)</label>
+                <input type="file" id="encryptFileInput" accept="image/*,video/*">
+                <div id="encryptFileName" class="file-name">未选择文件</div>
+                <button id="openCameraBtn" class="btn btn-outline" style="margin-top:8px;">📸 摄像头拍照加密</button>
+                <div id="cameraContainer" style="display:none; margin-top:8px;"></div>
+                <div id="cameraStatus" class="small-note"></div>
+            </div>
+            <button id="encryptBtn" class="btn btn-primary">✨ 加密并生成文件+密钥</button>
+            <div id="encryptResult" style="display:none; margin-top:1rem; background:#ffffffcc; border-radius:1rem; padding:0.8rem;">
+                <div><strong>✅ 加密完成</strong></div>
+                <div class="key-box"><span>🔑 密钥:</span><span id="generatedKeyValue"></span><button id="copyKeyBtn" class="copy-btn">复制</button></div>
+                <button id="downloadEncFileBtn" class="btn-outline btn">⬇️ 下载加密文件</button>
+                <div class="small-note">⚠️ 密钥丢失无法解密，文件含哈希+压缩</div>
+            </div>
+        </div>
+
+        <!-- 卡片2: 多图片批量加密 -->
+        <div class="card">
+            <div class="card-title">🖼️ 批量图片加密</div>
+            <div class="file-area">
+                <label class="file-label" for="batchFilesInput">📁 选择多张图片</label>
+                <input type="file" id="batchFilesInput" accept="image/*" multiple>
+                <div id="batchFileList" class="batch-list">未选择任何图片</div>
+            </div>
+            <button id="batchEncryptBtn" class="btn btn-primary">📦 打包加密 (输出一个文件)</button>
+            <div id="batchEncryptResult" style="display:none; margin-top:1rem; background:#ffffffcc; border-radius:1rem; padding:0.8rem;">
+                <div><strong>✅ 批量加密完成</strong></div>
+                <div class="key-box"><span>🔑 密钥:</span><span id="batchGeneratedKey"></span><button id="copyBatchKeyBtn" class="copy-btn">复制</button></div>
+                <button id="downloadBatchFileBtn" class="btn-outline btn">⬇️ 下载加密包</button>
+                <div class="small-note">包含所有图片，解密后可逐一预览/保存</div>
+            </div>
+        </div>
+
+        <!-- 卡片3: 解密验证 (兼容单文件/批量包) -->
+        <div class="card">
+            <div class="card-title">🔓 解密验证</div>
+            <div class="file-area">
+                <label class="file-label" for="decryptFileInput">📁 上传加密文件</label>
+                <input type="file" id="decryptFileInput">
+                <div id="decryptFileName" class="file-name">未选择文件</div>
+            </div>
+            <input type="text" id="decryptKeyInput" placeholder="粘贴 Base64 密钥">
+            <button id="decryptBtn" class="btn btn-secondary">🔎 解密并校验完整性</button>
+            <div id="decryptStatus" style="margin-top:1rem;">
+                <div class="status-badge">等待解密</div>
+                <div id="verifyMessage" style="margin-top:6px;"></div>
+                <div id="previewContainer" class="preview-box" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+    <footer>🔐 AES-GCM 256 | Deflate压缩 | SHA-256校验 | 批量包格式：MULT标识+文件列表，全本地处理</footer>
+</div>
+
+<script>
+    (function(){
+        // ---------- 通用工具 ----------
+        function arrayBufferToBase64(buffer){const bytes=new Uint8Array(buffer);let binary='';for(let i=0;i<bytes.byteLength;i++)binary+=String.fromCharCode(bytes[i]);return btoa(binary);}
+        function base64ToArrayBuffer(base64){const binary=atob(base64);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes.buffer;}
+        function concatBuffers(buffers){const total=buffers.reduce((s,b)=>s+b.byteLength,0);const res=new Uint8Array(total);let off=0;for(const buf of buffers){res.set(new Uint8Array(buf),off);off+=buf.byteLength;}return res.buffer;}
+        async function compressData(buf){if(!window.CompressionStream)throw new Error("浏览器不支持CompressionStream");const blob=new Blob([buf]);const stream=blob.stream().pipeThrough(new CompressionStream('deflate'));const resp=new Response(stream);return await resp.arrayBuffer();}
+        async function decompressData(buf){if(!window.DecompressionStream)throw new Error("不支持解压");const blob=new Blob([buf]);const stream=blob.stream().pipeThrough(new DecompressionStream('deflate'));const resp=new Response(stream);return await resp.arrayBuffer();}
+        async function sha256Hash(buffer){const hash=await crypto.subtle.digest('SHA-256',buffer);return new Uint8Array(hash);}
+        async function generateAesKey(){return await crypto.subtle.generateKey({name:"AES-GCM",length:256},true,["encrypt","decrypt"]);}
+        async function exportKeyToBase64(key){const raw=await crypto.subtle.exportKey("raw",key);return arrayBufferToBase64(raw);}
+        async function importKeyFromBase64(b64){const buf=base64ToArrayBuffer(b64);return await crypto.subtle.importKey("raw",buf,{name:"AES-GCM",length:256},false,["decrypt"]);}
+        async function aesGcmEncrypt(key,plaintext){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},key,plaintext);return concatBuffers([iv.buffer,ct]);}
+        async function aesGcmDecrypt(key,encrypted){if(encrypted.byteLength<12)throw new Error("密文损坏");const iv=new Uint8Array(encrypted.slice(0,12));const ct=encrypted.slice(12);return await crypto.subtle.decrypt({name:"AES-GCM",iv:iv},key,ct);}
+        
+        // ---------- 单文件负载构建/解析 (兼容旧格式) ----------
+        async function buildSinglePayload(mime,origHash,compressed){const enc=new TextEncoder();const mimeBytes=enc.encode(mime);const lenBuf=new ArrayBuffer(2);new DataView(lenBuf).setUint16(0,mimeBytes.length,false);const hashBytes=new Uint8Array(origHash);return concatBuffers([lenBuf,mimeBytes,hashBytes.buffer,compressed]);}
+        async function parseSinglePayload(buf){const dv=new DataView(buf);const mimeLen=dv.getUint16(0,false);let off=2;const mimeBytes=new Uint8Array(buf,off,mimeLen);const mime=new TextDecoder().decode(mimeBytes);off+=mimeLen;const expectedHash=new Uint8Array(buf,off,32);off+=32;const compressed=buf.slice(off);return {type:"single",mimeType:mime,expectedHash,compressedData:compressed};}
+        
+        // ---------- 批量负载构建 (多个图片打包) ----------
+        // 结构: 魔术字 "MULT"(4) + 版本(1) + 文件数量(4) + 对于每个文件: 文件名长度(2)+文件名UTF8 + MIME长度(2)+MIME + 数据长度(4)+数据
+        async function buildBatchPayload(files){ // files: [{name, mime, dataBuffer}]
+            const encoder=new TextEncoder();
+            const parts=[];
+            // 魔术字 MULT
+            parts.push(new TextEncoder().encode("MULT").buffer);
+            // 版本 0x01
+            parts.push(new Uint8Array([1]).buffer);
+            // 数量 4字节小端
+            const countBuf=new ArrayBuffer(4);
+            new DataView(countBuf).setUint32(0,files.length,true);
+            parts.push(countBuf);
+            for(const f of files){
+                const nameBytes=encoder.encode(f.name);
+                if(nameBytes.length>65535)throw new Error(`文件名过长:${f.name}`);
+                const nameLenBuf=new ArrayBuffer(2);
+                new DataView(nameLenBuf).setUint16(0,nameBytes.length,false);
+                parts.push(nameLenBuf);
+                parts.push(nameBytes.buffer);
+                const mimeBytes=encoder.encode(f.mime);
+                const mimeLenBuf=new ArrayBuffer(2);
+                new DataView(mimeLenBuf).setUint16(0,mimeBytes.length,false);
+                parts.push(mimeLenBuf);
+                parts.push(mimeBytes.buffer);
+                const dataLenBuf=new ArrayBuffer(4);
+                new DataView(dataLenBuf).setUint32(0,f.dataBuffer.byteLength,true);
+                parts.push(dataLenBuf);
+                parts.push(f.dataBuffer);
+            }
+            return concatBuffers(parts);
+        }
+        // 解析批量负载, 返回文件列表 [{name,mime,dataBuffer}]
+        async function parseBatchPayload(buffer){
+            const dv=new DataView(buffer);
+            let offset=0;
+            const magic= new Uint8Array(buffer,0,4);
+            if(magic[0]!==77 || magic[1]!==85 || magic[2]!==76 || magic[3]!==84) throw new Error("无效的批量包魔术字");
+            offset+=4;
+            const version=dv.getUint8(offset); offset+=1;
+            if(version!==1) throw new Error(`不支持的批量版本${version}`);
+            const fileCount=dv.getUint32(offset,true); offset+=4;
+            const files=[];
+            for(let i=0;i<fileCount;i++){
+                if(offset+2>buffer.byteLength) throw new Error("批量包格式错误");
+                const nameLen=dv.getUint16(offset,false); offset+=2;
+                const nameBytes=new Uint8Array(buffer,offset,nameLen);
+                const name=new TextDecoder().decode(nameBytes); offset+=nameLen;
+                const mimeLen=dv.getUint16(offset,false); offset+=2;
+                const mimeBytes=new Uint8Array(buffer,offset,mimeLen);
+                const mime=new TextDecoder().decode(mimeBytes); offset+=mimeLen;
+                const dataLen=dv.getUint32(offset,true); offset+=4;
+                const dataBuffer=buffer.slice(offset,offset+dataLen); offset+=dataLen;
+                files.push({name,mime,dataBuffer});
+            }
+            return files;
+        }
+
+        // ---------- 通用解密入口: 自动识别单文件或批量 ----------
+        async function universalDecrypt(encryptedBuffer, keyBase64){
+            const aesKey=await importKeyFromBase64(keyBase64);
+            const plainPayload=await aesGcmDecrypt(aesKey,encryptedBuffer);
+            // 先尝试解压 (无论单文件还是批量都是压缩过的)
+            let decompressed;
+            try{ decompressed=await decompressData(plainPayload); }catch(e){ throw new Error("解压失败，数据可能损坏"); }
+            // 检查是否批量包 (魔术字)
+            if(decompressed.byteLength>=4){
+                const head=new Uint8Array(decompressed,0,4);
+                if(head[0]===77 && head[1]===85 && head[2]===76 && head[3]===84){
+                    // 批量包
+                    const fileList=await parseBatchPayload(decompressed);
+                    return {type:"batch", files:fileList};
+                }
+            }
+            // 否则按单文件解析
+            const single=await parseSinglePayload(decompressed);
+            return {type:"single", mimeType:single.mimeType, expectedHash:single.expectedHash, compressedData:single.compressedData};
+        }
+
+        // ---------- 单文件加密全局变量 ----------
+        let currentEncryptedBlob=null,currentGeneratedKeyBase64="",currentDownloadUrl=null;
+        let cameraPhotoBlob=null,cameraPhotoName=null,activeStream=null;
+        // 批量加密全局
+        let batchEncryptedBlob=null,batchGeneratedKey="",batchDownloadUrl=null;
+        
+        // DOM 元素
+        const encryptFileInput=document.getElementById('encryptFileInput');
+        const encryptFileNameSpan=document.getElementById('encryptFileName');
+        const encryptBtn=document.getElementById('encryptBtn');
+        const encryptResultDiv=document.getElementById('encryptResult');
+        const generatedKeySpan=document.getElementById('generatedKeyValue');
+        const copyKeyBtn=document.getElementById('copyKeyBtn');
+        const downloadEncFileBtn=document.getElementById('downloadEncFileBtn');
+        const openCameraBtn=document.getElementById('openCameraBtn');
+        const cameraContainer=document.getElementById('cameraContainer');
+        const cameraStatusSpan=document.getElementById('cameraStatus');
+        // 批量DOM
+        const batchFilesInput=document.getElementById('batchFilesInput');
+        const batchFileListDiv=document.getElementById('batchFileList');
+        const batchEncryptBtn=document.getElementById('batchEncryptBtn');
+        const batchEncryptResultDiv=document.getElementById('batchEncryptResult');
+        const batchGeneratedKeySpan=document.getElementById('batchGeneratedKey');
+        const copyBatchKeyBtn=document.getElementById('copyBatchKeyBtn');
+        const downloadBatchFileBtn=document.getElementById('downloadBatchFileBtn');
+        // 解密DOM
+        const decryptFileInput=document.getElementById('decryptFileInput');
+        const decryptFileNameSpan=document.getElementById('decryptFileName');
+        const decryptKeyInput=document.getElementById('decryptKeyInput');
+        const decryptBtn=document.getElementById('decryptBtn');
+        const decryptStatusDiv=document.getElementById('decryptStatus');
+        const verifyMessageSpan=document.getElementById('verifyMessage');
+        const previewContainer=document.getElementById('previewContainer');
+
+        // 辅助函数: 展示批量结果
+        function showBatchResult(files){
+            previewContainer.style.display='block';
+            previewContainer.innerHTML=`<div><strong>📸 批量包内容 (${files.length}张图片)</strong><div class="image-gallery" id="galleryGrid"></div></div>`;
+            const grid=document.getElementById('galleryGrid');
+            for(let idx=0;idx<files.length;idx++){
+                const f=files[idx];
+                const blob=new Blob([f.dataBuffer],{type:f.mime});
+                const url=URL.createObjectURL(blob);
+                const div=document.createElement('div');
+                div.className='gallery-item';
+                div.innerHTML=`
+                    <img src="${url}" alt="${escapeHtml(f.name)}" style="width:100px;height:100px;object-fit:cover;">
+                    <div class="name">${escapeHtml(f.name)}</div>
+                    <button class="btn-download-single" data-index="${idx}">💾 保存</button>
+                `;
+                div.querySelector('button').addEventListener('click',(e)=>{
+                    e.stopPropagation();
+                    const a=document.createElement('a');
+                    a.href=URL.createObjectURL(blob);
+                    a.download=f.name;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                });
+                grid.appendChild(div);
+                // 用于自动释放URL，但保留一段时间
+                div.setAttribute('data-url',url);
+            }
+            // 清理函数，页面关闭或重新解密时释放
+            if(window._batchUrls) window._batchUrls.forEach(u=>URL.revokeObjectURL(u));
+            window._batchUrls=Array.from(grid.children).map(c=>c.getAttribute('data-url')).filter(u=>u);
+        }
+        function escapeHtml(str){return str.replace(/[&<>]/g,function(m){if(m==='&')return '&amp;';if(m==='<')return '&lt;';if(m==='>')return '&gt;';return m;});}
+        function clearPreview(){previewContainer.innerHTML='';previewContainer.style.display='none';if(window._currentPreviewUrl)URL.revokeObjectURL(window._currentPreviewUrl);if(window._batchUrls)window._batchUrls.forEach(u=>URL.revokeObjectURL(u));window._batchUrls=null;window._currentPreviewUrl=null;}
+        function resetDecryptStatus(){clearPreview();verifyMessageSpan.innerHTML='';const badge=decryptStatusDiv.querySelector('.status-badge');if(badge){badge.className='status-badge';badge.innerText='等待解密';}}
+
+        // ---------- 单文件加密逻辑 (支持文件/拍照) ----------
+        async function performSingleEncryption(fileBuffer, mime, name){
+            const origHash=await sha256Hash(fileBuffer);
+            const compressed=await compressData(fileBuffer);
+            const payload=await buildSinglePayload(mime,origHash,compressed);
+            const aesKey=await generateAesKey();
+            const keyBase64=await exportKeyToBase64(aesKey);
+            const encrypted=await aesGcmEncrypt(aesKey,payload);
+            currentEncryptedBlob=encrypted;
+            currentGeneratedKeyBase64=keyBase64;
+            generatedKeySpan.innerText=keyBase64;
+            encryptResultDiv.style.display='block';
+            if(currentDownloadUrl)URL.revokeObjectURL(currentDownloadUrl);
+            const encBlob=new Blob([currentEncryptedBlob],{type:'application/octet-stream'});
+            currentDownloadUrl=URL.createObjectURL(encBlob);
+            downloadEncFileBtn.onclick=()=>{const a=document.createElement('a');a.href=currentDownloadUrl;a.download=`encrypted_${(name||'file').replace(/\.[^/.]+$/,'')||'media'}.aes`;a.click();};
+            copyKeyBtn.onclick=()=>{navigator.clipboard.writeText(currentGeneratedKeyBase64).then(()=>alert("密钥已复制")).catch(()=>alert("手动复制"));};
+        }
+        encryptBtn.addEventListener('click',async()=>{
+            let srcBuffer=null,srcMime=null,srcName=null;
+            if(cameraPhotoBlob){
+                srcBuffer=await cameraPhotoBlob.arrayBuffer();
+                srcMime=cameraPhotoBlob.type || 'image/jpeg';
+                srcName=cameraPhotoName;
+            }else if(encryptFileInput.files.length>0){
+                const f=encryptFileInput.files[0];
+                srcBuffer=await f.arrayBuffer();
+                srcMime=f.type || 'application/octet-stream';
+                srcName=f.name;
+            }else{alert("请选择文件或拍照");return;}
+            encryptBtn.disabled=true;encryptBtn.innerText='⏳ 加密中...';
+            try{ await performSingleEncryption(srcBuffer,srcMime,srcName); encryptBtn.innerText='✨ 加密完成';}
+            catch(e){alert("加密失败:"+e.message);encryptBtn.innerText='❌ 重试';}
+            finally{encryptBtn.disabled=false;}
+        });
+        encryptFileInput.addEventListener('change',(e)=>{if(e.target.files.length){cameraPhotoBlob=null;encryptFileNameSpan.innerText=e.target.files[0].name;cameraStatusSpan.innerText='';hideCameraUI();}else encryptFileNameSpan.innerText="未选择文件";encryptResultDiv.style.display='none';});
+        // 摄像头逻辑
+        function stopCamera(){if(activeStream){activeStream.getTracks().forEach(t=>t.stop());activeStream=null;}}
+        function hideCameraUI(){cameraContainer.style.display='none';cameraContainer.innerHTML='';stopCamera();}
+        openCameraBtn.addEventListener('click',()=>{stopCamera();cameraContainer.style.display='block';cameraContainer.innerHTML=`<div><video id="cameraVideo" autoplay playsinline class="camera-video"></video><div style="display:flex;gap:8px;margin-top:8px;"><button id="capturePhotoBtn" class="btn btn-cam" style="background:#2c7da0;">📷 拍照</button><button id="closeCameraBtn" class="btn btn-cam-cancel">取消</button></div></div>`;const videoElem=document.getElementById('cameraVideo');navigator.mediaDevices.getUserMedia({video:true}).then(stream=>{activeStream=stream;videoElem.srcObject=stream;videoElem.play();cameraStatusSpan.innerText='✅ 摄像头已就绪';}).catch(err=>{cameraStatusSpan.innerText='❌ 摄像头失败';hideCameraUI();});document.getElementById('capturePhotoBtn')?.addEventListener('click',()=>{const video=document.getElementById('cameraVideo');if(!video||!video.videoWidth)return;const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;canvas.getContext('2d').drawImage(video,0,0);canvas.toBlob(blob=>{if(blob){cameraPhotoBlob=blob;cameraPhotoName=`camera_${Date.now()}.jpg`;encryptFileNameSpan.innerHTML=`📷 ${cameraPhotoName}`;cameraStatusSpan.innerText='已拍照，可加密';hideCameraUI();}},'image/jpeg',0.9);});document.getElementById('closeCameraBtn')?.addEventListener('click',()=>{hideCameraUI();cameraStatusSpan.innerText='';});});
+        
+        // ---------- 批量加密逻辑 ----------
+        batchFilesInput.addEventListener('change',(e)=>{
+            const files=Array.from(e.target.files);
+            if(files.length===0){batchFileListDiv.innerHTML='未选择任何图片';return;}
+            batchFileListDiv.innerHTML=files.map(f=>`📷 ${f.name} (${(f.size/1024).toFixed(1)}KB)`).join('<br>');
+            batchEncryptResultDiv.style.display='none';
+        });
+        batchEncryptBtn.addEventListener('click',async()=>{
+            const files=Array.from(batchFilesInput.files);
+            if(files.length===0){alert("请选择至少一张图片");return;}
+            batchEncryptBtn.disabled=true;batchEncryptBtn.innerText='📦 打包压缩中...';
+            try{
+                const fileItems=[];
+                for(const f of files){
+                    const buf=await f.arrayBuffer();
+                    fileItems.push({name:f.name,mime:f.type || 'image/jpeg',dataBuffer:buf});
+                }
+                const rawBatch=await buildBatchPayload(fileItems);
+                const compressedBatch=await compressData(rawBatch);
+                const origHashAll=await sha256Hash(rawBatch);
+                // 注意: 批量包不需要单文件的MIME，但为了复用加密流程，我们将整个压缩后的批量包当作plaintext加密，而哈希是原始打包数据的哈希
+                // 为了方便，将批量包构建为一个虚拟的“负载”：直接压缩后加密，但为了解密时能校验批量包完整性，我们需要将原始打包数据的哈希也嵌入到加密负载中？实际上我们可以把哈希放在压缩后的前缀中，但为了统一解密接口，我们在批量包的压缩数据前面加上哈希和长度，这样解密时先解压再验证哈希。但为了简单且不破坏单文件结构，我们在加密前对原始批量数据计算哈希，并将哈希和批量数据一起压缩。不过解密时先解压再拿到哈希比对。更简单: 直接加密压缩后的批量包，并在解密时计算解压后数据的哈希与原哈希比对。我们需要把原哈希也存进去。设计: 加密的明文 = [原始批量数据的哈希(32字节)] + [压缩后的批量数据] 这样解密后即可校验。
+                // 重新构造: 加密负载 = hash(原始批量) + compressedBatch
+                const hashBuffer = new Uint8Array(origHashAll).buffer;
+                const finalPlain = concatBuffers([hashBuffer, compressedBatch]);
+                const aesKey=await generateAesKey();
+                const keyBase64=await exportKeyToBase64(aesKey);
+                const encrypted=await aesGcmEncrypt(aesKey,finalPlain);
+                batchEncryptedBlob=encrypted;
+                batchGeneratedKey=keyBase64;
+                batchGeneratedKeySpan.innerText=keyBase64;
+                batchEncryptResultDiv.style.display='block';
+                if(batchDownloadUrl)URL.revokeObjectURL(batchDownloadUrl);
+                const encBlob=new Blob([batchEncryptedBlob],{type:'application/octet-stream'});
+                batchDownloadUrl=URL.createObjectURL(encBlob);
+                downloadBatchFileBtn.onclick=()=>{const a=document.createElement('a');a.href=batchDownloadUrl;a.download=`batch_images_${Date.now()}.aes`;a.click();};
+                copyBatchKeyBtn.onclick=()=>{navigator.clipboard.writeText(batchGeneratedKey).then(()=>alert("密钥已复制"));};
+                batchEncryptBtn.innerText='📦 加密完成';
+            }catch(e){alert("批量加密失败:"+e.message);batchEncryptBtn.innerText='❌ 重试';}
+            finally{batchEncryptBtn.disabled=false;}
+        });
+        
+        // ---------- 通用解密实现 (同时支持单文件和批量包) ----------
+        decryptBtn.addEventListener('click',async()=>{
+            if(!decryptFileInput.files.length){alert("请上传加密文件");return;}
+            const keyRaw=decryptKeyInput.value.trim();
+            if(!keyRaw){alert("请输入密钥");return;}
+            const encFile=decryptFileInput.files[0];
+            const encBuffer=await encFile.arrayBuffer();
+            const statusSpan=decryptStatusDiv.querySelector('.status-badge');
+            statusSpan.innerText='🔍 解密验证中...';statusSpan.className='status-badge';
+            verifyMessageSpan.innerHTML='';clearPreview();
+            decryptBtn.disabled=true;
+            try{
+                const aesKey=await importKeyFromBase64(keyRaw);
+                const plain = await aesGcmDecrypt(aesKey, encBuffer);
+                // 先尝试解压
+                let decompressed;
+                try{ decompressed = await decompressData(plain); }
+                catch(e){ decompressed = plain; } // 可能未压缩?但我们所有加密都压缩了，若失败尝试原样
+                // 判断是否是批量包 (自定义格式: 第一个数据是哈希+压缩数据)
+                // 批量包加密时明文 = [32字节哈希] + [压缩的批量数据]
+                if(decompressed.byteLength >= 36){
+                    const possibleHash = new Uint8Array(decompressed,0,32);
+                    const rest = decompressed.slice(32);
+                    // 尝试将rest解压，看能否得到有效批量包
+                    try{
+                        const maybeBatchCompressed = rest;
+                        const maybeBatchRaw = await decompressData(maybeBatchCompressed);
+                        if(maybeBatchRaw.byteLength>=4){
+                            const head = new Uint8Array(maybeBatchRaw,0,4);
+                            if(head[0]===77 && head[1]===85 && head[2]===76 && head[3]===84){
+                                const fileList = await parseBatchPayload(maybeBatchRaw);
+                                // 验证哈希
+                                const computedHash = await sha256Hash(maybeBatchRaw);
+                                const hashValid = computedHash.length===possibleHash.length && computedHash.every((v,i)=>v===possibleHash[i]);
+                                if(!hashValid)throw new Error("批量包哈希校验失败，文件可能被篡改");
+                                statusSpan.innerText='✅ 批量包解密成功';
+                                statusSpan.classList.add('success');
+                                verifyMessageSpan.innerHTML=`<span style="color:#0f5c3b;">✓ 哈希验证通过，共${fileList.length}张图片</span>`;
+                                showBatchResult(fileList);
+                                decryptBtn.disabled=false;
+                                return;
+                            }
+                        }
+                    }catch(e){ /* 不是批量包，走单文件逻辑 */ }
+                }
+                // 单文件逻辑
+                const singleResult = await parseSinglePayload(decompressed);
+                const originalData = await decompressData(singleResult.compressedData);
+                const computedHash=await sha256Hash(originalData);
+                const valid=computedHash.length===singleResult.expectedHash.length && computedHash.every((v,i)=>v===singleResult.expectedHash[i]);
+                if(!valid)throw new Error("单文件哈希校验失败");
+                const blob=new Blob([originalData],{type:singleResult.mimeType});
+                showPreview(blob,singleResult.mimeType);
+                statusSpan.innerText='✅ 解密成功 · 完整性验证通过';
+                statusSpan.classList.add('success');
+                const sizeMB=(originalData.byteLength/(1024*1024)).toFixed(2);
+                verifyMessageSpan.innerHTML=`<span>✓ 哈希验证通过</span><div>大小: ${sizeMB} MB | 类型: ${singleResult.mimeType}</div>`;
+            }catch(err){
+                statusSpan.innerText='❌ 解密失败';statusSpan.classList.add('error');
+                verifyMessageSpan.innerHTML=`<span style="color:#b13b3b;">${err.message}</span>`;
+                clearPreview();
+            }finally{decryptBtn.disabled=false;}
+        });
+        decryptFileInput.addEventListener('change',(e)=>{if(e.target.files.length)decryptFileNameSpan.innerText=e.target.files[0].name;else decryptFileNameSpan.innerText="未选择文件";resetDecryptStatus();});
+        function showPreview(blob,mime){clearPreview();const url=URL.createObjectURL(blob);if(mime.startsWith('image/')){const img=document.createElement('img');img.src=url;previewContainer.appendChild(img);}else if(mime.startsWith('video/')){const vid=document.createElement('video');vid.src=url;vid.controls=true;previewContainer.appendChild(vid);}else{previewContainer.innerHTML='<p>⚠️ 不支持预览</p>';}previewContainer.style.display='block';window._currentPreviewUrl=url;}
+        window.addEventListener('beforeunload',()=>{if(window._currentPreviewUrl)URL.revokeObjectURL(window._currentPreviewUrl);if(currentDownloadUrl)URL.revokeObjectURL(currentDownloadUrl);if(batchDownloadUrl)URL.revokeObjectURL(batchDownloadUrl);stopCamera();if(window._batchUrls)window._batchUrls.forEach(u=>URL.revokeObjectURL(u));});
+    })();
+</script>
+</body>
+</html>
